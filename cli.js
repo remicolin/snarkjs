@@ -22,7 +22,7 @@
 import fs from "fs";
 import url from "url";
 
-import {readR1cs} from "r1csfile";
+import { readR1cs } from "r1csfile";
 
 import loadSyms from "./src/loadsyms.js";
 import * as r1cs from "./src/r1cs.js";
@@ -31,9 +31,9 @@ import clProcessor from "./src/clprocessor.js";
 
 import * as powersOfTau from "./src/powersoftau.js";
 
-import {utils} from "ffjavascript";
+import { utils } from "ffjavascript";
 
-const {stringifyBigInts} = utils;
+const { stringifyBigInts } = utils;
 
 import * as zkey from "./src/zkey.js";
 import * as groth16 from "./src/groth16.js";
@@ -41,18 +41,26 @@ import * as plonk from "./src/plonk.js";
 import * as fflonk from "./src/fflonk.js";
 import * as wtns from "./src/wtns.js";
 import * as curves from "./src/curves.js";
+import * as inputs from './src/inputs.js';
 import path from "path";
 import bfj from "bfj";
 
 import Logger from "logplease";
 import * as binFileUtils from "@iden3/binfileutils";
 
-const logger = Logger.create("snarkJS", {showTimestamp: false});
+const logger = Logger.create("snarkJS", { showTimestamp: false });
 Logger.setLogLevel("INFO");
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 const commands = [
+    {
+        cmd: "generate inputs <circuit.circom>",
+        description: "Generates an input.json file for the given circuit",
+        alias: ["gi"],
+        options: "-rust|r",
+        action: generateInputs
+    },
     {
         cmd: "powersoftau new <curve> <power> [powersoftau_0000.ptau]",
         description: "Starts a powers of tau ceremony",
@@ -375,6 +383,19 @@ TODO COMMANDS
     }
 */
 
+async function generateInputs(circuitPath, options) {
+    if (!circuitPath) {
+        throw new Error("No circuit provided");
+    }
+    const isRustFormat = options.rust || options.r;
+    try {
+        await inputs.generateInput(circuitPath, isRustFormat);
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+
 
 function changeExt(fileName, newExt) {
     let S = fileName;
@@ -424,7 +445,7 @@ async function r1csExportJSON(params, options) {
 
     const r1csObj = await r1cs.exportJson(r1csName, logger);
 
-    await bfj.write(jsonName, r1csObj, {space: 1});
+    await bfj.write(jsonName, r1csObj, { space: 1 });
 
     return 0;
 }
@@ -473,7 +494,7 @@ async function wtnsExportJson(params, options) {
 
     const w = await wtns.exportJson(wtnsName);
 
-    await bfj.write(jsonName, stringifyBigInts(w), {space: 1});
+    await bfj.write(jsonName, stringifyBigInts(w), { space: 1 });
 
     return 0;
 }
@@ -530,10 +551,10 @@ async function groth16Prove(params, options) {
 
     if (options.verbose) Logger.setLogLevel("DEBUG");
 
-    const {proof, publicSignals} = await groth16.prove(zkeyName, witnessName, logger);
+    const { proof, publicSignals } = await groth16.prove(zkeyName, witnessName, logger);
 
-    await bfj.write(proofName, stringifyBigInts(proof), {space: 1});
-    await bfj.write(publicName, stringifyBigInts(publicSignals), {space: 1});
+    await bfj.write(proofName, stringifyBigInts(proof), { space: 1 });
+    await bfj.write(publicName, stringifyBigInts(publicSignals), { space: 1 });
 
     return 0;
 }
@@ -551,10 +572,10 @@ async function groth16FullProve(params, options) {
 
     const input = JSON.parse(await fs.promises.readFile(inputName, "utf8"));
 
-    const {proof, publicSignals} = await groth16.fullProve(input, wasmName, zkeyName, logger);
+    const { proof, publicSignals } = await groth16.fullProve(input, wasmName, zkeyName, logger);
 
-    await bfj.write(proofName, stringifyBigInts(proof), {space: 1});
-    await bfj.write(publicName, stringifyBigInts(publicSignals), {space: 1});
+    await bfj.write(proofName, stringifyBigInts(proof), { space: 1 });
+    await bfj.write(publicName, stringifyBigInts(publicSignals), { space: 1 });
 
     return 0;
 }
@@ -590,7 +611,7 @@ async function zkeyExportVKey(params, options) {
 
     const vKey = await zkey.exportVerificationKey(zKeyFileName, logger);
 
-    await bfj.write(vKeyFilename, stringifyBigInts(vKey), {space: 1});
+    await bfj.write(vKeyFilename, stringifyBigInts(vKey), { space: 1 });
 
     return 0;
 }
@@ -604,7 +625,7 @@ async function zkeyExportJson(params, options) {
 
     const zKeyJson = await zkey.exportJson(zkeyName, logger);
 
-    await bfj.write(zkeyJsonName, zKeyJson, {space: 1});
+    await bfj.write(zkeyJsonName, zKeyJson, { space: 1 });
 }
 
 async function fileExists(file) {
@@ -698,7 +719,7 @@ async function powersOfTauNew(params, options) {
     curveName = params[0];
 
     power = parseInt(params[1]);
-    if ((power<1) || (power>28) || isNaN(power)) {
+    if ((power < 1) || (power > 28) || isNaN(power)) {
         throw new Error("Power must be between 1 and 28");
     }
 
@@ -893,7 +914,7 @@ async function powersOfTauExportJson(params, options) {
 
     const pTauJson = await powersOfTau.exportJson(ptauName, logger);
 
-    await bfj.write(jsonName, pTauJson, {space: 1});
+    await bfj.write(jsonName, pTauJson, { space: 1 });
 }
 
 
@@ -1141,10 +1162,10 @@ async function plonkProve(params, options) {
 
     if (options.verbose) Logger.setLogLevel("DEBUG");
 
-    const {proof, publicSignals} = await plonk.prove(zkeyName, witnessName, logger);
+    const { proof, publicSignals } = await plonk.prove(zkeyName, witnessName, logger);
 
-    await bfj.write(proofName, stringifyBigInts(proof), {space: 1});
-    await bfj.write(publicName, stringifyBigInts(publicSignals), {space: 1});
+    await bfj.write(proofName, stringifyBigInts(proof), { space: 1 });
+    await bfj.write(publicName, stringifyBigInts(publicSignals), { space: 1 });
 
     return 0;
 }
@@ -1163,10 +1184,10 @@ async function plonkFullProve(params, options) {
 
     const input = JSON.parse(await fs.promises.readFile(inputName, "utf8"));
 
-    const {proof, publicSignals} = await plonk.fullProve(input, wasmName, zkeyName, logger);
+    const { proof, publicSignals } = await plonk.fullProve(input, wasmName, zkeyName, logger);
 
-    await bfj.write(proofName, stringifyBigInts(proof), {space: 1});
-    await bfj.write(publicName, stringifyBigInts(publicSignals), {space: 1});
+    await bfj.write(proofName, stringifyBigInts(proof), { space: 1 });
+    await bfj.write(publicName, stringifyBigInts(publicSignals), { space: 1 });
 
     return 0;
 }
@@ -1214,12 +1235,12 @@ async function fflonkProve(params, options) {
 
     if (options.verbose) Logger.setLogLevel("DEBUG");
 
-    const {proof, publicSignals} = await fflonk.prove(zkeyFilename, witnessFilename, logger);
+    const { proof, publicSignals } = await fflonk.prove(zkeyFilename, witnessFilename, logger);
 
-    if(undefined !== proofFilename && undefined !== publicInputsFilename) {
+    if (undefined !== proofFilename && undefined !== publicInputsFilename) {
         // Write the proof and the publig signals in each file
-        await bfj.write(proofFilename, stringifyBigInts(proof), {space: 1});
-        await bfj.write(publicInputsFilename, stringifyBigInts(publicSignals), {space: 1});
+        await bfj.write(proofFilename, stringifyBigInts(proof), { space: 1 });
+        await bfj.write(publicInputsFilename, stringifyBigInts(publicSignals), { space: 1 });
     }
 
     return 0;
@@ -1237,11 +1258,11 @@ async function fflonkFullProve(params, options) {
 
     const input = JSON.parse(await fs.promises.readFile(witnessInputsFilename, "utf8"));
 
-    const {proof, publicSignals} = await fflonk.fullProve(input, wasmFilename, zkeyFilename, logger);
+    const { proof, publicSignals } = await fflonk.fullProve(input, wasmFilename, zkeyFilename, logger);
 
     // Write the proof and the publig signals in each file
-    await bfj.write(proofFilename, stringifyBigInts(proof), {space: 1});
-    await bfj.write(publicInputsFilename, stringifyBigInts(publicSignals), {space: 1});
+    await bfj.write(proofFilename, stringifyBigInts(proof), { space: 1 });
+    await bfj.write(publicInputsFilename, stringifyBigInts(publicSignals), { space: 1 });
 
     return 0;
 }
